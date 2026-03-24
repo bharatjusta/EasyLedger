@@ -1,4 +1,4 @@
-# Shop Ledger Pro
+# Easy Ledger
 
 A free, open-source single-page ledger application for small shops and businesses to track customer/vendor accounts, sales, and payments.
 
