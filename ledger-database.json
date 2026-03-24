@@ -1,0 +1,41 @@
+{
+  "accounts": [
+    {
+      "name": "BJ",
+      "entries": [
+        {
+          "date": "2026-02-01",
+          "desc": "bought",
+          "debit": 0,
+          "credit": 1200,
+          "dueDate": ""
+        },
+        {
+          "date": "2026-03-24",
+          "desc": "paid",
+          "debit": 200,
+          "credit": 0,
+          "dueDate": ""
+        },
+        {
+          "date": "2026-03-24",
+          "desc": "advance",
+          "debit": 5000,
+          "credit": 0,
+          "dueDate": ""
+        },
+        {
+          "date": "2026-03-24",
+          "desc": "bought",
+          "debit": 0,
+          "credit": 10000,
+          "dueDate": ""
+        }
+      ]
+    },
+    {
+      "name": "CJ",
+      "entries": []
+    }
+  ]
+}

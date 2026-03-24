@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Ledger Pro</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --bg: #f4f7f6;
+            --card-bg: #fff;
+            --text: #333;
+            --text-muted: #666;
+            --border: #ddd;
+            --shadow: rgba(0,0,0,0.08);
+        }
+        [data-theme="dark"] {
+            --bg: #1a1a2e;
+            --card-bg: #16213e;
+            --text: #eee;
+            --text-muted: #aaa;
+            --border: #333;
+            --shadow: rgba(0,0,0,0.3);
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; background: var(--bg); color: var(--text); transition: 0.3s; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header */
+        header { background: var(--primary); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 10px var(--shadow); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-left strong { font-size: 18px; }
+        .total-balance { background: var(--success); padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+        .total-balance.negative { background: var(--danger); }
+        .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .file-controls { display: flex; gap: 8px; }
+        
+        /* Layout */
+        .container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Sidebar */
+        nav { width: 300px; background: var(--card-bg); border-right: 1px solid var(--border); padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
+        .search-box { position: relative; margin-bottom: 15px; }
+        .search-box input { width: 100%; padding: 10px 35px 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+        .search-box input:focus { outline: none; border-color: var(--accent); }
+        .search-box::after { content: "🔍"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; }
+        
+        .account-item { display: flex; align-items: center; padding: 12px; cursor: pointer; border-radius: 8px; margin-bottom: 6px; transition: 0.2s; border: 1px solid var(--border); background: var(--bg); }
+        .account-item:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        .account-item.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .acc-info { flex: 1; }
+        .acc-name { font-weight: 600; display: block; }
+        .acc-balance { font-size: 12px; opacity: 0.8; }
+        .acc-balance.negative { color: #ff6b6b; }
+        .account-item.active .acc-balance { color: rgba(255,255,255,0.8); }
+        .account-item.active .acc-balance.negative { color: #ffcccc; }
+        .acc-actions { display: flex; gap: 4px; }
+        .acc-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px 6px; border-radius: 4px; opacity: 0.7; }
+        .acc-btn:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+        .account-item.active .acc-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* Main Content */
+        main { flex: 1; padding: 20px; overflow-y: auto; background: var(--bg); }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 2px 15px var(--shadow); margin-bottom: 20px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .card-header h2 { margin: 0; font-size: 20px; }
+        
+        /* Stats Row */
+        .stats-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .stat-box { flex: 1; min-width: 120px; padding: 12px; background: var(--bg); border-radius: 8px; text-align: center; }
+        .stat-box .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-box .value { font-size: 18px; font-weight: bold; margin-top: 4px; }
+        .stat-box .value.positive { color: var(--success); }
+        .stat-box .value.negative { color: var(--danger); }
+        
+        /* Form */
+        .entry-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        input, select { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--bg); color: var(--text); }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+        input.error { border-color: var(--danger); }
+        
+        /* Buttons */
+        button { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-main { background: var(--accent); color: white; }
+        .btn-main:hover { background: #2980b9; }
+        .btn-outline { background: #95a5a6; color: white; }
+        .btn-outline:hover { background: #7f8c8d; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-sm { padding: 6px 10px; font-size: 12px; }
+        .btn-icon { padding: 8px; min-width: 36px; justify-content: center; }
+        
+        /* Toolbar */
+        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+        .toolbar select, .toolbar input { padding: 8px 12px; font-size: 13px; }
+        .toolbar span { font-size: 12px; color: var(--text-muted); }
+        
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+        th { background: var(--bg); color: var(--text-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; font-weight: 600; position: sticky; top: 0; }
+        tr:hover { background: var(--bg); }
+        .positive { color: var(--success); font-weight: bold; }
+        .negative { color: var(--danger); font-weight: bold; }
+        .overdue { background: #fff3cd !important; }
+        .overdue td:first-child::before { content: "⚠️ "; }
+        .editing-row td { background: var(--bg); padding: 8px; }
+        .editing-row input, .editing-row select { width: 100%; padding: 8px; }
+        
+        /* Toast */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--accent); }
+        .toast.warning { background: var(--warning); }
+        .toast .undo-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-left: auto; }
+        .toast .close-btn { background: none; border: none; color: white; cursor: pointer; font-size: 16px; opacity: 0.7; }
+        .toast .close-btn:hover { opacity: 1; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; }
+        .modal { background: var(--card-bg); padding: 25px; border-radius: 12px; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal h3 { margin-top: 0; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        
+        /* Empty State */
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; }
+        .empty-state p { margin: 5px 0; }
+        
+        /* Keyboard hint */
+        .keyboard-hint { font-size: 10px; color: var(--text-muted); background: var(--bg); padding: 2px 6px; border-radius: 3px; margin-left: 5px; }
+        
+        /* Print */
+        @media print {
+            header, nav, .entry-form, .toolbar, .btn-group, .acc-actions { display: none !important; }
+            main { padding: 0; }
+            .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+            .positive { color: #27ae60 !important; }
+            .negative { color: #e74c3c !important; }
+        }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            nav { width: 100%; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+            .entry-form { grid-template-columns: 1fr 1fr; }
+            .stats-row { flex-direction: column; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .toolbar select, .toolbar input { width: 100%; }
+            .header-left { flex-wrap: wrap; }
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <strong>Shop Ledger</strong>
+        <span class="total-balance" id="totalBalance">All: ₹0.00</span>
+    </div>
+    <div class="header-actions">
+        <button class="btn-outline btn-sm" id="btnDarkMode" title="Toggle Dark Mode">🌙</button>
+        <button class="btn-outline btn-sm" id="btnPrint" title="Print Statement">🖨️</button>
+        <div class="file-controls">
+            <button class="btn-outline btn-sm" id="btnOpenFile">📂 Open</button>
+            <button class="btn-outline btn-sm hidden" id="btnDownload">💾 Save</button>
+            <input type="file" id="mobileFilePicker" class="hidden" accept=".json">
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <nav>
+        <div class="search-box">
+            <input type="text" id="accountSearch" placeholder="Search accounts..." oninput="renderAccounts()">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <input type="text" id="newAccName" placeholder="Account Name..." style="width: 100%; margin-bottom: 8px;">
+            <button class="btn-main" onclick="addAccount()" style="width: 100%;">+ Create Account</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-weight: bold; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">MY ACCOUNTS</span>
+            <button class="acc-btn" onclick="sortAccounts()" title="Sort A-Z">Sort A-Z</button>
+        </div>
+        <div id="accountsList"></div>
+    </nav>
+
+    <main id="appContent" class="hidden">
+        <div class="card">
+            <div class="card-header">
+                <h2 id="currentAccountName">Account Name</h2>
+                <button class="btn-outline btn-sm" onclick="deleteCurrentAccount()">🗑️ Delete Account</button>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="label">Total Sales (Out)</div>
+                    <div class="value negative" id="statSale">₹0.00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Total Payments (In)</div>
+                    <div class="value positive" id="statPayment">₹0.00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Current Balance</div>
+                    <div class="value" id="statBalance">₹0.00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">This Month</div>
+                    <div class="value" id="statMonth">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="entry-form">
+                <div class="form-group">
+                    <label>Date <span class="keyboard-hint">d</span></label>
+                    <input type="date" id="entryDate">
+                </div>
+                <div class="form-group">
+                    <label>Description <span class="keyboard-hint">n</span></label>
+                    <input type="text" id="entryDesc" placeholder="Enter description">
+                </div>
+                <div class="form-group">
+                    <label>Sale (Out) <span class="keyboard-hint">r</span></label>
+                    <input type="number" id="entrySale" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Payment (In) <span class="keyboard-hint">c</span></label>
+                    <input type="number" id="entryPayment" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="entryDueDate">
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                    <label>&nbsp;</label>
+                    <button class="btn-main" onclick="addEntry()">+ Add Entry</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>Transactions</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn-outline btn-sm" onclick="exportCSV()">📊 CSV</button>
+                    <button class="btn-outline btn-sm" onclick="showBackupModal()">💾 Backup</button>
+                    <button class="btn-outline btn-sm" onclick="sortEntriesByDate()">📅 Sort</button>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <input type="text" id="searchEntries" placeholder="Search entries..." oninput="renderEntries()" style="flex:1">
+                <span>From:</span>
+                <input type="date" id="filterDateFrom" onchange="renderEntries()">
+                <span>To:</span>
+                <input type="date" id="filterDateTo" onchange="renderEntries()">
+                <button class="btn-outline btn-sm" onclick="clearFilters()">Clear</button>
+            </div>
+            
+            <div id="entriesTableWrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">Date</th>
+                            <th style="width: 30%;">Description</th>
+                            <th style="width: 12%;">Sale (Out)</th>
+                            <th style="width: 12%;">Payment (In)</th>
+                            <th style="width: 12%;">Due</th>
+                            <th style="width: 12%;">Balance</th>
+                            <th style="width: 10%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerBody"></tbody>
+                </table>
+            </div>
+            <div id="emptyEntries" class="empty-state hidden">
+                <div class="icon">📋</div>
+                <p>No transactions yet</p>
+                <p style="font-size: 12px;">Add your first entry above</p>
+            </div>
+        </div>
+    </main>
+    
+    <main id="welcomeContent" style="flex:1; display: flex; align-items: center; justify-content: center;">
+        <div class="empty-state">
+            <div class="icon">📒</div>
+            <h2 style="margin-bottom:5px;">Welcome to Shop Ledger</h2>
+            <p>Create an account or open an existing file to get started</p>
+            <p style="font-size: 12px; margin-top: 20px;">💡 Press <kbd style="background:#eee;padding:2px 6px;border-radius:3px;">?</kbd> for keyboard shortcuts</p>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div id="backupModal" class="modal-overlay hidden">
+    <div class="modal">
+        <h3>Backup & Restore</h3>
+        <div style="margin: 15px 0;">
+            <p style="margin: 10px 0;"><strong>Create Backup:</strong></p>
+            <button class="btn-main" onclick="downloadBackup()">Download Backup (JSON)</button>
+        </div>
+        <div style="margin: 15px 0;">
+            <p style="margin: 10px 0;"><strong>Restore from Backup:</strong></p>
+            <input type="file" id="restoreFile" accept=".json" onchange="restoreBackup(event)" style="width:100%">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="closeBackupModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="deleteModal" class="modal-overlay hidden">
+    <div class="modal">
+        <h3>Delete Entry</h3>
+        <p id="deletePreview"></p>
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
+        </div>
+    </div>
+</div>
+
+<div id="shortcutsModal" class="modal-overlay hidden">
+    <div class="modal">
+        <h3>Keyboard Shortcuts</h3>
+        <table style="margin: 15px 0;">
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">Enter</kbd></td><td>Add entry</td></tr>
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">Ctrl+S</kbd></td><td>Sync/Save file</td></tr>
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">Ctrl+B</kbd></td><td>Backup</td></tr>
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">Ctrl+P</kbd></td><td>Print</td></tr>
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">Ctrl+D</kbd></td><td>Dark mode</td></tr>
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">Esc</kbd></td><td>Close modal</td></tr>
+            <tr><td style="padding:8px;"><kbd style="background:#eee;padding:2px 6px;border-radius:3px;">?</kbd></td><td>Show shortcuts</td></tr>
+        </table>
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="closeShortcutsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let data = { accounts: [] };
+let currentAccIdx = -1;
+let fileHandle = null;
+let lastDeleted = null;
+let toastTimeout = null;
+
+const btnOpenFile = document.getElementById('btnOpenFile');
+const mobileFilePicker = document.getElementById('mobileFilePicker');
+const totalBalanceEl = document.getElementById('totalBalance');
+
+// Initialize
+document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+loadTheme();
+loadFromLocalStorage();
+
+// File handling
+if (!('showOpenFilePicker' in window)) {
+    btnOpenFile.onclick = () => mobileFilePicker.click();
+} else {
+    btnOpenFile.addEventListener('click', async () => {
+        try {
+            [fileHandle] = await window.showOpenFilePicker({
+                types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+            });
+            const file = await fileHandle.getFile();
+            loadData(await file.text());
+            showToast('File loaded successfully', 'success');
+        } catch (e) { if(e.name !== 'AbortError') showToast('Failed to open file', 'error'); }
+    });
+}
+
+mobileFilePicker.onchange = (e) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => { loadData(ev.target.result); document.getElementById('btnDownload').classList.remove('hidden'); };
+    reader.readAsText(e.target.files[0]);
+};
+
+function loadData(json) {
+    try {
+        data = JSON.parse(json || '{"accounts":[]}');
+        migrateData();
+        renderAccounts();
+        updateTotalBalance();
+        document.getElementById('appContent').classList.remove('hidden');
+        document.getElementById('welcomeContent').style.display = 'none';
+        saveToLocalStorage();
+    } catch (e) { showToast('Invalid JSON file', 'error'); }
+}
+
+function migrateData() {
+    data.accounts.forEach(acc => {
+        acc.entries.forEach(entry => {
+            if (entry.dueDate === undefined) entry.dueDate = '';
+        });
+    });
+}
+
+async function sync() {
+    saveToLocalStorage();
+    if (fileHandle) {
+        try {
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(data, null, 2));
+            await writable.close();
+        } catch (e) { showToast('Sync failed', 'error'); }
+    }
+}
+
+function loadFromLocalStorage() {
+    const saved = localStorage.getItem('shopLedgerData');
+    if (saved) {
+        try {
+            data = JSON.parse(saved);
+            migrateData();
+            renderAccounts();
+            updateTotalBalance();
+            document.getElementById('appContent').classList.remove('hidden');
+            document.getElementById('welcomeContent').style.display = 'none';
+        } catch (e) {}
+    }
+}
+
+function saveToLocalStorage() {
+    localStorage.setItem('shopLedgerData', JSON.stringify(data));
+}
+
+function loadTheme() {
+    const theme = localStorage.getItem('theme');
+    if (theme === 'dark') document.body.setAttribute('data-theme', 'dark');
+    document.getElementById('btnDarkMode').textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    document.body.setAttribute('data-theme', isDark ? '' : 'dark');
+    document.getElementById('btnDarkMode').textContent = isDark ? '🌙' : '☀️';
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
+// Account Management
+function addAccount() {
+    const name = document.getElementById('newAccName').value.trim();
+    if (!name) { showToast('Enter account name', 'warning'); return; }
+    if (data.accounts.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+        showToast('Account already exists', 'warning'); return;
+    }
+    data.accounts.push({ name: name, entries: [] });
+    document.getElementById('newAccName').value = '';
+    renderAccounts();
+    updateTotalBalance();
+    sync();
+    showToast('Account created', 'success');
+}
+
+function renderAccounts() {
+    const list = document.getElementById('accountsList');
+    const search = document.getElementById('accountSearch').value.toLowerCase();
+    list.innerHTML = '';
+    
+    const filtered = data.accounts.filter(a => a.name.toLowerCase().includes(search));
+    
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">No accounts found</div>';
+        return;
+    }
+    
+    filtered.forEach((acc) => {
+        const idx = data.accounts.indexOf(acc);
+        const balance = calculateBalance(acc.entries);
+        const div = document.createElement('div');
+        div.className = `account-item ${idx === currentAccIdx ? 'active' : ''}`;
+        div.innerHTML = `
+            <div class="acc-info">
+                <span class="acc-name">${escapeHtml(acc.name)}</span>
+                <span class="acc-balance ${balance < 0 ? 'negative' : ''}">${formatCurrency(balance)}</span>
+            </div>
+            <div class="acc-actions">
+                <button class="acc-btn" onclick="event.stopPropagation(); editAccountName(${idx})" title="Edit">✏️</button>
+                <button class="acc-btn" onclick="event.stopPropagation(); deleteAccount(${idx})" title="Delete">🗑️</button>
+            </div>
+        `;
+        div.querySelector('.acc-info').onclick = () => selectAccount(idx);
+        list.appendChild(div);
+    });
+}
+
+function selectAccount(idx) {
+    currentAccIdx = idx;
+    document.getElementById('currentAccountName').innerText = data.accounts[idx].name;
+    renderAccounts();
+    renderEntries();
+    updateStats();
+}
+
+function editAccountName(idx) {
+    const newName = prompt("Edit account name:", data.accounts[idx].name);
+    if (newName && newName.trim()) {
+        if (data.accounts.some((a, i) => i !== idx && a.name.toLowerCase() === newName.trim().toLowerCase())) {
+            showToast('Account name already exists', 'warning'); return;
+        }
+        data.accounts[idx].name = newName.trim();
+        renderAccounts();
+        if (currentAccIdx === idx) selectAccount(idx);
+        sync();
+    }
+}
+
+function deleteAccount(idx) {
+    const acc = data.accounts[idx];
+    if (confirm(`Delete account "${acc.name}" and all ${acc.entries.length} transactions?`)) {
+        lastDeleted = { data: JSON.parse(JSON.stringify(data)), idx, timestamp: Date.now() };
+        data.accounts.splice(idx, 1);
+        if (currentAccIdx >= data.accounts.length) currentAccIdx = data.accounts.length - 1;
+        if (currentAccIdx < 0) {
+            document.getElementById('appContent').classList.add('hidden');
+            document.getElementById('welcomeContent').style.display = 'flex';
+        }
+        renderAccounts();
+        updateTotalBalance();
+        sync();
+        showToast('Account deleted', 'info', true);
+    }
+}
+
+function deleteCurrentAccount() {
+    if (currentAccIdx >= 0) deleteAccount(currentAccIdx);
+}
+
+function sortAccounts() {
+    data.accounts.sort((a, b) => a.name.localeCompare(b.name));
+    renderAccounts();
+    sync();
+}
+
+function calculateBalance(entries) {
+    return entries.reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+}
+
+function updateTotalBalance() {
+    const total = data.accounts.reduce((sum, acc) => sum + calculateBalance(acc.entries), 0);
+    totalBalanceEl.textContent = `All: ${formatCurrency(total)}`;
+    totalBalanceEl.className = `total-balance ${total < 0 ? 'negative' : ''}`;
+}
+
+// Entry Management
+function addEntry() {
+    if (currentAccIdx === -1) return;
+    
+    const desc = document.getElementById('entryDesc').value.trim();
+    const saleAmount = parseFloat(document.getElementById('entrySale').value) || 0;
+    const paymentAmount = parseFloat(document.getElementById('entryPayment').value) || 0;
+    const dueDate = document.getElementById('entryDueDate').value || '';
+    
+    if (!desc) {
+        document.getElementById('entryDesc').classList.add('error');
+        showToast('Enter description', 'warning');
+        setTimeout(() => document.getElementById('entryDesc').classList.remove('error'), 1000);
+        return;
+    }
+    
+    if (saleAmount === 0 && paymentAmount === 0) {
+        showToast('Enter sale or payment amount', 'warning');
+        return;
+    }
+    
+    const entry = {
+        date: document.getElementById('entryDate').value || new Date().toISOString().split('T')[0],
+        desc: desc,
+        debit: paymentAmount,
+        credit: saleAmount,
+        dueDate: dueDate
+    };
+    
+    const acc = data.accounts[currentAccIdx];
+    if (acc.entries.some(e => e.date === entry.date && e.desc === entry.desc && e.debit === entry.debit && e.credit === entry.credit)) {
+        if (!confirm('Duplicate entry detected. Add anyway?')) return;
+    }
+    
+    acc.entries.push(entry);
+    renderEntries();
+    updateStats();
+    renderAccounts();
+    updateTotalBalance();
+    sync();
+    
+    document.getElementById('entryDesc').value = '';
+    document.getElementById('entrySale').value = '';
+    document.getElementById('entryPayment').value = '';
+    document.getElementById('entryDueDate').value = '';
+    
+    showToast('Entry added', 'success');
+}
+
+function renderEntries() {
+    if (currentAccIdx === -1) return;
+    
+    const body = document.getElementById('ledgerBody');
+    const search = document.getElementById('searchEntries').value.toLowerCase();
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    
+    body.innerHTML = '';
+    
+    let entries = data.accounts[currentAccIdx].entries.filter(e => {
+        if (search && !e.desc.toLowerCase().includes(search)) return false;
+        if (dateFrom && e.date < dateFrom) return false;
+        if (dateTo && e.date > dateTo) return false;
+        return true;
+    });
+    
+    document.getElementById('emptyEntries').classList.toggle('hidden', entries.length > 0);
+    
+    let runningBalance = 0;
+    const allEntries = data.accounts[currentAccIdx].entries;
+    const firstFilteredIndex = allEntries.findIndex(e => entries.includes(e));
+    if (firstFilteredIndex > 0) {
+        for (let i = 0; i < firstFilteredIndex; i++) {
+            runningBalance += allEntries[i].debit - allEntries[i].credit;
+        }
+    }
+    
+    entries.forEach((e, idx) => {
+        const originalIdx = allEntries.indexOf(e);
+        runningBalance += e.debit - e.credit;
+        const isOverdue = e.dueDate && e.credit > 0 && e.dueDate < new Date().toISOString().split('T')[0];
+        
+        const tr = document.createElement('tr');
+        tr.className = isOverdue ? 'overdue' : '';
+        tr.innerHTML = `
+            <td>${e.date}</td>
+            <td>${escapeHtml(e.desc)}</td>
+            <td class="negative">${e.credit > 0 ? formatCurrency(e.credit) : ''}</td>
+            <td class="positive">${e.debit > 0 ? formatCurrency(e.debit) : ''}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${e.dueDate || '-'}</td>
+            <td style="font-weight:bold;${runningBalance < 0 ? 'color:var(--danger)' : ''}">${formatCurrency(runningBalance)}</td>
+            <td style="text-align:right">
+                <button class="acc-btn" onclick="startEditEntry(${originalIdx})" title="Edit">✏️</button>
+                <button class="acc-btn" onclick="showDeleteEntryModal(${originalIdx})" title="Delete">🗑️</button>
+            </td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+function startEditEntry(idx) {
+    const e = data.accounts[currentAccIdx].entries[idx];
+    const body = document.getElementById('ledgerBody');
+    const rows = body.getElementsByTagName('tr');
+    
+    for (let tr of rows) {
+        if (tr.classList.contains('editing-row')) {
+            showToast('Finish editing current entry first', 'warning');
+            return;
+        }
+    }
+    
+    const tr = rows[idx];
+    tr.className = 'editing-row';
+    tr.innerHTML = `
+        <td><input type="date" id="editDate" value="${e.date}"></td>
+        <td><input type="text" id="editDesc" value="${escapeHtml(e.desc)}"></td>
+        <td><input type="number" id="editSale" value="${e.credit}" step="0.01" min="0"></td>
+        <td><input type="number" id="editPayment" value="${e.debit}" step="0.01" min="0"></td>
+        <td><input type="date" id="editDueDate" value="${e.dueDate || ''}"></td>
+        <td>-</td>
+        <td>
+            <button class="btn-sm btn-main" onclick="saveEdit(${idx})">✅</button>
+            <button class="btn-sm btn-outline" onclick="renderEntries()">❌</button>
+        </td>
+    `;
+}
+
+async function saveEdit(idx) {
+    data.accounts[currentAccIdx].entries[idx] = {
+        date: document.getElementById('editDate').value,
+        desc: document.getElementById('editDesc').value.trim() || 'No description',
+        debit: parseFloat(document.getElementById('editPayment').value) || 0,
+        credit: parseFloat(document.getElementById('editSale').value) || 0,
+        dueDate: document.getElementById('editDueDate').value || ''
+    };
+    renderEntries();
+    updateStats();
+    renderAccounts();
+    updateTotalBalance();
+    await sync();
+    showToast('Entry updated', 'success');
+}
+
+function showDeleteEntryModal(idx) {
+    const e = data.accounts[currentAccIdx].entries[idx];
+    document.getElementById('deletePreview').innerHTML = `
+        <strong>${escapeHtml(e.desc)}</strong><br>
+        Date: ${e.date}<br>
+        Sale (Out): ${formatCurrency(e.credit)} | Payment (In): ${formatCurrency(e.debit)}
+    `;
+    document.getElementById('confirmDeleteBtn').onclick = () => deleteEntry(idx);
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+function deleteEntry(idx) {
+    closeDeleteModal();
+    lastDeleted = { entry: data.accounts[currentAccIdx].entries[idx], idx, timestamp: Date.now() };
+    data.accounts[currentAccIdx].entries.splice(idx, 1);
+    renderEntries();
+    updateStats();
+    renderAccounts();
+    updateTotalBalance();
+    sync();
+    showToast('Entry deleted', 'info', true);
+}
+
+function sortEntriesByDate() {
+    data.accounts[currentAccIdx].entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderEntries();
+    sync();
+    showToast('Sorted by date', 'info');
+}
+
+function clearFilters() {
+    document.getElementById('searchEntries').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    renderEntries();
+}
+
+function updateStats() {
+    if (currentAccIdx === -1) return;
+    const entries = data.accounts[currentAccIdx].entries;
+    const totalSales = entries.reduce((s, e) => s + (e.credit || 0), 0);
+    const totalPayments = entries.reduce((s, e) => s + (e.debit || 0), 0);
+    const balance = totalPayments - totalSales;
+    
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const monthTxns = entries.filter(e => e.date >= monthStart);
+    const monthBalance = monthTxns.reduce((s, e) => s + (e.debit || 0) - (e.credit || 0), 0);
+    
+    document.getElementById('statSale').textContent = formatCurrency(totalSales);
+    document.getElementById('statPayment').textContent = formatCurrency(totalPayments);
+    document.getElementById('statBalance').textContent = formatCurrency(balance);
+    document.getElementById('statBalance').className = `value ${balance >= 0 ? 'positive' : 'negative'}`;
+    document.getElementById('statMonth').textContent = formatCurrency(monthBalance);
+    document.getElementById('statMonth').className = `value ${monthBalance >= 0 ? 'positive' : 'negative'}`;
+}
+
+// CSV Export
+function exportCSV() {
+    if (currentAccIdx === -1) return;
+    const entries = data.accounts[currentAccIdx].entries;
+    const accName = data.accounts[currentAccIdx].name;
+    
+    let csv = 'Date,Description,Sale (Out),Payment (In),Due Date,Balance\n';
+    let balance = 0;
+    
+    entries.forEach(e => {
+        balance += e.debit - e.credit;
+        csv += `"${e.date}","${e.desc.replace(/"/g, '""')}",${e.credit},${e.debit},"${e.dueDate || ''}",${balance}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${accName.replace(/[^a-z0-9]/gi, '_')}_ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    showToast('CSV exported', 'success');
+}
+
+// Backup
+function showBackupModal() {
+    document.getElementById('backupModal').classList.remove('hidden');
+}
+
+function closeBackupModal() {
+    document.getElementById('backupModal').classList.add('hidden');
+}
+
+function downloadBackup() {
+    const backup = { ...data, _backupDate: new Date().toISOString(), _version: '2.0' };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ledger_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    showToast('Backup downloaded', 'success');
+}
+
+function restoreBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (backup.accounts) {
+                if (confirm('This will replace all current data. Continue?')) {
+                    data = { accounts: backup.accounts };
+                    renderAccounts();
+                    updateTotalBalance();
+                    sync();
+                    closeBackupModal();
+                    showToast('Backup restored', 'success');
+                }
+            } else {
+                showToast('Invalid backup file', 'error');
+            }
+        } catch (err) { showToast('Failed to parse backup', 'error'); }
+    };
+    reader.readAsText(file);
+}
+
+// Toast
+function showToast(message, type = 'info', withUndo = false) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    let html = `<span>${message}</span>`;
+    if (withUndo && lastDeleted) {
+        html += `<button class="undo-btn" onclick="undoLastDelete()">Undo</button>`;
+    }
+    html += `<button class="close-btn" onclick="this.parentElement.remove()">×</button>`;
+    toast.innerHTML = html;
+    
+    container.appendChild(toast);
+    
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.remove(), 5000);
+}
+
+function undoLastDelete() {
+    if (!lastDeleted) return;
+    if (lastDeleted.data) {
+        data = lastDeleted.data;
+        currentAccIdx = lastDeleted.idx;
+    } else if (lastDeleted.entry) {
+        data.accounts[currentAccIdx].entries.splice(lastDeleted.idx, 0, lastDeleted.entry);
+    }
+    lastDeleted = null;
+    renderAccounts();
+    renderEntries();
+    updateStats();
+    updateTotalBalance();
+    sync();
+    showToast('Action undone', 'info');
+    document.querySelector('.toast .undo-btn')?.parentElement?.remove();
+}
+
+// Shortcuts Modal
+function showShortcutsModal() {
+    document.getElementById('shortcutsModal').classList.remove('hidden');
+}
+function closeShortcutsModal() {
+    document.getElementById('shortcutsModal').classList.add('hidden');
+}
+
+// Keyboard Shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const form = e.target.closest('.entry-form');
+            if (form) { e.preventDefault(); addEntry(); }
+        }
+        return;
+    }
+    
+    if (e.key === '?') { showShortcutsModal(); return; }
+    if (e.key === 'Escape') {
+        closeBackupModal();
+        closeDeleteModal();
+        closeShortcutsModal();
+        return;
+    }
+    
+    if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+            case 's': e.preventDefault(); sync(); showToast('Saved', 'success'); break;
+            case 'b': e.preventDefault(); showBackupModal(); break;
+            case 'p': e.preventDefault(); window.print(); break;
+            case 'd': e.preventDefault(); toggleDarkMode(); break;
+        }
+    }
+});
+
+// Print
+document.getElementById('btnPrint').onclick = () => window.print();
+document.getElementById('btnDarkMode').onclick = () => toggleDarkMode();
+document.getElementById('btnDownload').onclick = () => downloadBackup();
+
+// Mobile download button visibility
+if (!('showOpenFilePicker' in window)) {
+    document.getElementById('btnDownload').classList.remove('hidden');
+}
+
+// Helpers
+function formatCurrency(val) {
+    return '₹' + (val || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+</body>
+</html>
